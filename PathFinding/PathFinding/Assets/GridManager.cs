@@ -104,7 +104,7 @@ public class GridManager : MonoBehaviour {
     {
         List<int> neighbors = new List<int> { -1, 1, -n_x, n_x, -n_x - 1, -n_x + 1, n_x - 1, n_x + 1 };
 
-        if (cellno % n_x == 0)          neighbors.RemoveAll( (no) => { return no == -1   || no == -1 - n_x || no == -1 + n_x; } );
+        if (cellno % n_x == 0)          neighbors.RemoveAll( (no) => no == -1   || no == -1 - n_x || no == -1 + n_x);
         if (cellno % n_x == n_x - 1)    neighbors.RemoveAll( (no) => { return no ==  1   || no ==  1 - n_x || no ==  1 + n_x; } );
         if (cellno / n_x == 0)          neighbors.RemoveAll( (no) => { return no == -n_x || no == -n_x - 1 || no == -n_x + 1; } );
         if (cellno / n_x == n_z - 1)    neighbors.RemoveAll( (no) => { return no ==  n_x || no ==  n_x - 1 || no ==  n_x + 1; } );
@@ -170,7 +170,7 @@ public class GridManager : MonoBehaviour {
         public float    g; // global cost
     }
 
-    public enum MethodType {  BFS, AStar };
+    public enum MethodType {  BFS, AStar, DFS };
 
     float computeDistance(int cell1, int cell2)
     {
@@ -178,6 +178,53 @@ public class GridManager : MonoBehaviour {
     }
 
     public MethodType method = MethodType.BFS;
+
+    int[] findDFSPath(int from, int to, TileType[] world)
+    {
+        print("DFS");
+        int max_tiles = n_x * n_z;
+
+        if (from < 0 || from >= max_tiles || to < 0 || to >= max_tiles) return null;
+
+        int[] parents = new int[max_tiles];
+        bool[] visited = new bool[max_tiles];
+
+        for (int i = 0; i < parents.Length; i++) parents[i] = -1;
+        for (int i = 0; i < visited.Length; i++) visited[i] = false;
+        //초기화
+
+        List<int> N = new List<int>() { from };
+        while (N.Count > 0)
+        {
+            var lowScore = N.Min(node=>Mathf.Abs(to-node)); 
+            var current = N.First(n => Mathf.Abs(to - n) == lowScore);
+            N.Remove(current);
+            if (visited[current]== true) continue;
+            visited[current] = true;
+
+
+            int[] neighbors = findNeighbors(current, world);
+            foreach (var neighbor in neighbors)
+            {
+                if (neighbor == to)
+                {
+                    // found the destination
+                    parents[neighbor] = current;
+                    return buildPath(parents, from, to); // read parents array and construct the shoretest path by traversal
+                }
+
+                if (parents[neighbor] == -1) // neighbor's parent is not set yet.
+                {
+                    parents[neighbor] = current; // make current tile as neighbor's parent
+                    if (visited[neighbor]==false)
+                        N.Add(neighbor); // enqueue
+                }
+            }
+        }
+
+        return null;
+
+    }
 
     int[] findShortestPath(int from, int to, TileType[] world)
     {
@@ -189,12 +236,14 @@ public class GridManager : MonoBehaviour {
         // initialize the parents of all tiles to negative value, implying no tile number associated.
         int[] parents = new int[max_tiles];
         for (int i = 0; i < parents.Length; i++) parents[i] = -1;
+        //초기화
 
-        List<int> N = new List<int>() { from };
+        Queue<int> N = new Queue<int>();
+        N.Enqueue(from);
         int nIterations = 0;
         while (N.Count > 0)
         {
-            int current = N[0]; N.RemoveAt(0); // dequeue
+            int current = N.Dequeue(); // dequeue
             nIterations++;
 
             int[] neighbors = findNeighbors(current, world);
@@ -211,7 +260,7 @@ public class GridManager : MonoBehaviour {
                 if (parents[neighbor] == -1) // neighbor's parent is not set yet.
                 {
                     parents[neighbor] = current; // make current tile as neighbor's parent
-                    N.Add(neighbor); // enqueue
+                    N.Enqueue(neighbor); // enqueue
                 }
             }
         }
@@ -230,6 +279,7 @@ public class GridManager : MonoBehaviour {
         int[] parents = new int[max_tiles];       
 
         for (int i = 0; i < parents.Length; i++) parents[i] = -1;
+        //초기화
 
         List<Node> closed = new List<Node>();
         List<Node> open = new List<Node>() { new Node { no = from, f = 0f, g = 0f}  };
@@ -287,6 +337,8 @@ public class GridManager : MonoBehaviour {
             path = findShortestPath(start, end, world);
         else if (method == MethodType.AStar)
             path = findAstarPath(start, end, world);
+        else if (method == MethodType.DFS)
+            path = findDFSPath(start, end, world);
         if (path == null) yield break;
 
         // path should start from "source" to "destination".
