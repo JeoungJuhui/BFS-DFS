@@ -6,6 +6,7 @@ using System.Linq;
 
 public class GridManager : MonoBehaviour {
 
+
     public enum TileType {
         Plain,
         Wall
@@ -28,6 +29,12 @@ public class GridManager : MonoBehaviour {
         world[pos2Cell(pos)] = TileType.Wall;
     }
 
+    public void SetAsPlain(Vector3 pos)
+    {
+        world[pos2Cell(pos)] = TileType.Plain;
+    }
+
+
     public void BuildWorld(int n_rows, int n_cols)
     {
         int max_tiles = n_rows * n_cols;
@@ -45,17 +52,6 @@ public class GridManager : MonoBehaviour {
         {
             world[i] = TileType.Plain;
             if (i == player_cell) continue; // we assign the player's location as a plain grid cell.
-
-            /*
-            if (Random.Range(0.0f, 1.0f) < 0.25) // wall is created with a probability of 25 %.
-            {
-                world[i] = TileType.Wall;
-                var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                wall.GetComponent<MeshRenderer>().material.color = Color.yellow;
-                wall.tag = "Wall";
-                wall.transform.position = locateToCenter(cell2Pos(i));
-            }
-            */
         }
 
         for (int i = 0; i < max_tiles; i++) drawRect(i, world[i] == TileType.Wall ? Color.black : Color.green);
